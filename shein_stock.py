@@ -54,8 +54,8 @@ def main():
     women = safe_fetch_count(WOMEN_API)
 
     # ==== TEST MODE (TEMPORARY) ====
-    men = 5
-    women = 2
+    men = 466
+    women = 155
 
     now = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
