@@ -51,6 +51,10 @@ def send_message(text):
 
 
 def main():
+    # ✅ AUTO RUN PROOF (every scheduled run)
+    if EVENT == "schedule":
+        send_message("✅ Bot is running (Auto check OK)")
+
     old = load_last()
 
     men = safe_fetch_count(MEN_API)
@@ -63,7 +67,7 @@ def main():
 
     is_manual = EVENT == "workflow_dispatch"
 
-    # 🔕 AUTO MODE: sirf STOCK UP par hi message
+    # 🔕 AUTO MODE: stock increase nahi hua to sirf heartbeat aaya, stock msg nahi
     if not is_manual and men_diff <= 0 and women_diff <= 0:
         save_last(men, women)
         return
