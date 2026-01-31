@@ -89,3 +89,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+# 🔁 AUTO RUN HEARTBEAT (SAFE)
+if EVENT == "schedule":
+    send_message("✅ Bot is alive (15 min auto check OK)")
