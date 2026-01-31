@@ -1,26 +1,28 @@
-name: Shein Stock Bot
+name: run-bot
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # har 10 minute
+    - cron: "*/15 * * * *"   # every 15 minutes
   workflow_dispatch:
 
 jobs:
-  run-bot:
+  run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install deps
-        run: pip install requests
+        run: |
+          pip install -r requirements.txt
 
       - name: Run bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python shein_stock.py
+        run: |
+          python shein_stock.py
