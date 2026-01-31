@@ -4,19 +4,24 @@ import telegram
 import os
 from datetime import datetime
 
+# SHEIN category URL
 URL = "https://www.sheinindia.in/c/sverse-5939-37961"
 
+# Telegram credentials (GitHub Secrets se aayenge)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 def get_counts():
-    r = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    r = requests.get(URL, headers=headers, timeout=20)
     soup = BeautifulSoup(r.text, "html.parser")
 
-    text = soup.get_text(" ", strip=True)
+    text = soup.get_text(" ", strip=True).lower()
 
-    men = text.lower().count("men")
-    women = text.lower().count("women")
+    men = text.count("men")
+    women = text.count("women")
 
     return men, women
 
