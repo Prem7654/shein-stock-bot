@@ -1,54 +1,86 @@
-import requests, os, json
-from bs4 import BeautifulSoup
+import os
+import json
+import requests
 from datetime import datetime
 
-URL = "https://www.sheinindia.in/c/sverse-5939-37961"
-STATE_FILE = "last_stock.json"
+MEN_API = "https://www.sheinindia.in/pd/search/get_products?cat_id=5939&page=1&page_size=1"
+WOMEN_API = "https://www.sheinindia.in/pd/search/get_products?cat_id=37961&page=1&page_size=1"
+SHEIN_LINK = "https://www.sheinindia.in/c/sverse-5939-37961"
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+EVENT = os.getenv("GITHUB_EVENT_NAME")
 
-def get_stock():
-    r = requests.get(URL, timeout=20)
-    soup = BeautifulSoup(r.text, "html.parser")
+LAST_FILE = "last_stock.json"
 
-    text = soup.get_text().lower()
-    men = text.count("men")    # simple reliable detect
-    women = text.count("women")
 
-    return men, women
+def fetch_count(url):
+    r = requests.get(url, timeout=20)
+    r.raise_for_status()
+    data = r.json()
+    return int(data["info"]["total"])
+
+
+def send_message(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(url, json={
+        "chat_id": CHAT_ID,
+        "text": text,
+        "disable_web_page_preview": False
+    })
+
 
 def load_last():
-    if not os.path.exists(STATE_FILE):
-        return 0, 0
-    with open(STATE_FILE) as f:
-        d = json.load(f)
-        return d["men"], d["women"]
+    if not os.path.exists(LAST_FILE):
+        return {"men": 0, "women": 0}
+    with open(LAST_FILE, "r") as f:
+        return json.load(f)
 
-def save_current(men, women):
-    with open(STATE_FILE, "w") as f:
+
+def save_last(men, women):
+    with open(LAST_FILE, "w") as f:
         json.dump({"men": men, "women": women}, f)
 
-def send_alert(men, women):
-    msg = f"""🚨 SHEIN STOCK UP!
 
-👨 Men → {men}
-👩 Women → {women}
+def main():
+    last = load_last()
 
-⏰ {datetime.now().strftime("%d %b %Y, %I:%M %p")}
-🔗 {URL}
-"""
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": msg}
-    )
+    men_now = fetch_count(MEN_API)
+    women_now = fetch_count(WOMEN_API)
 
-# ---- MAIN ----
-last_men, last_women = load_last()
-men, women = get_stock()
+    men_old = last["men"]
+    women_old = last["women"]
 
-# ONLY notify if stock increased
-if (men > last_men) or (women > last_women):
-    send_alert(men, women)
+    is_manual = EVENT == "workflow_dispatch"
 
-save_current(men, women)
+    # --- MANUAL CHECK ---
+    if is_manual:
+        msg = (
+            "📦 SHEIN STOCK (Manual Check)\n\n"
+            f"👨 Men → {men_old}\n"
+            f"👩 Women → {women_old}\n\n"
+            f"🕒 {datetime.now().strftime('%d %b %Y, %I:%M %p')}\n"
+            f"🔗 {SHEIN_LINK}"
+        )
+        send_message(msg)
+        return
+
+    # --- AUTO STOCK UP ONLY ---
+    if men_now > men_old or women_now > women_old:
+        men_added = men_now - men_old
+        women_added = women_now - women_old
+
+        msg = (
+            "🔔 Shein Stock Update\n\n"
+            f"👨 Men → {men_old} + {men_added} ⬆️ = {men_now}\n"
+            f"👩 Women → {women_old} + {women_added} ⬆️ = {women_now}\n\n"
+            f"⏰ {datetime.now().strftime('%d %b %Y, %I:%M %p')}\n"
+            f"🔗 {SHEIN_LINK}"
+        )
+
+        send_message(msg)
+        save_last(men_now, women_now)
+
+
+if __name__ == "__main__":
+    main()
