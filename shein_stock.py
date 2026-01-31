@@ -1,45 +1,54 @@
-import requests
+import requests, os, json
 from bs4 import BeautifulSoup
-import telegram
-import os
 from datetime import datetime
 
-# SHEIN category URL
 URL = "https://www.sheinindia.in/c/sverse-5939-37961"
+STATE_FILE = "last_stock.json"
 
-# Telegram credentials (GitHub Secrets se aayenge)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-def get_counts():
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-    r = requests.get(URL, headers=headers, timeout=20)
+def get_stock():
+    r = requests.get(URL, timeout=20)
     soup = BeautifulSoup(r.text, "html.parser")
 
-    text = soup.get_text(" ", strip=True).lower()
-
-    men = text.count("men")
+    text = soup.get_text().lower()
+    men = text.count("men")    # simple reliable detect
     women = text.count("women")
 
     return men, women
 
-def main():
-    men, women = get_counts()
-    now = datetime.now().strftime("%d %b %Y, %I:%M %p")
+def load_last():
+    if not os.path.exists(STATE_FILE):
+        return 0, 0
+    with open(STATE_FILE) as f:
+        d = json.load(f)
+        return d["men"], d["women"]
 
-    msg = f"""🔔 SHEIN STOCK UPDATE
+def save_current(men, women):
+    with open(STATE_FILE, "w") as f:
+        json.dump({"men": men, "women": women}, f)
+
+def send_alert(men, women):
+    msg = f"""🚨 SHEIN STOCK UP!
 
 👨 Men → {men}
 👩 Women → {women}
 
-⏰ {now}
+⏰ {datetime.now().strftime("%d %b %Y, %I:%M %p")}
 🔗 {URL}
 """
+    requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data={"chat_id": CHAT_ID, "text": msg}
+    )
 
-    bot = telegram.Bot(token=BOT_TOKEN)
-    bot.send_message(chat_id=CHAT_ID, text=msg)
+# ---- MAIN ----
+last_men, last_women = load_last()
+men, women = get_stock()
 
-if __name__ == "__main__":
-    main()
+# ONLY notify if stock increased
+if (men > last_men) or (women > last_women):
+    send_alert(men, women)
+
+save_current(men, women)
