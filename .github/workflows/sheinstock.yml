@@ -2,7 +2,7 @@ name: Shein Stock Bot
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # har 10 minute
+    - cron: "*/1 * * * *"   # har 1 minute
   workflow_dispatch:
 
 jobs:
@@ -19,12 +19,10 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: |
-          python shein_stock.py
+        run: python shein_stock.py
