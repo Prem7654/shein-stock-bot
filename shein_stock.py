@@ -52,9 +52,11 @@ def main():
 
     men = safe_fetch_count(MEN_API)
     women = safe_fetch_count(WOMEN_API)
-# ===== TEST MODE (TEMPORARY) =====
-men = 5
-women = 2
+
+    # ==== TEST MODE (TEMPORARY) ====
+    men = 5
+    women = 2
+
     now = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
     men_diff = men - old["men"]
