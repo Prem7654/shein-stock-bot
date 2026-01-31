@@ -5,6 +5,7 @@ from datetime import datetime
 
 # ================= CONFIG =================
 SHEIN_URL = "https://www.sheinindia.in/c/sverse-5939-37961"
+
 MEN_API = "https://www.sheinindia.in/api/product/list?cat_id=5939"
 WOMEN_API = "https://www.sheinindia.in/api/product/list?cat_id=37961"
 
@@ -39,18 +40,17 @@ def save_last(men, women):
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, json={
-        "chat_id": CHAT_ID,
-        "text": text,
-        "disable_web_page_preview": False
-    })
+    requests.post(
+        url,
+        json={
+            "chat_id": CHAT_ID,
+            "text": text,
+            "disable_web_page_preview": False
+        }
+    )
 
 
 def main():
-    # ✅ AUTO RUN PROOF (NO FAKE NUMBERS)
-    if EVENT == "schedule":
-        send_message("✅ Bot is running (Auto check OK)")
-
     old = load_last()
 
     men = safe_fetch_count(MEN_API)
@@ -63,7 +63,7 @@ def main():
 
     is_manual = EVENT == "workflow_dispatch"
 
-    # ❌ Auto me sirf STOCK UP par hi message
+    # 🔕 AUTO MODE: sirf STOCK UP par hi message
     if not is_manual and men_diff <= 0 and women_diff <= 0:
         save_last(men, women)
         return
