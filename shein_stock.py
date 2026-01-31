@@ -1,27 +1,26 @@
 import os
 import json
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 
+# ================= CONFIG =================
 SHEIN_URL = "https://www.sheinindia.in/c/sverse-5939-37961"
+MEN_API = "https://www.sheinindia.in/api/product/list?cat_id=5939"
+WOMEN_API = "https://www.sheinindia.in/api/product/list?cat_id=37961"
+
 LAST_FILE = "last_stock.json"
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 EVENT = os.getenv("GITHUB_EVENT_NAME")
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0"
-}
+# =========================================
 
 
 def safe_fetch_count(url):
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.select(".product-card")  # SHEIN cards
-        return len(items)
+        r = requests.get(url, timeout=15)
+        data = r.json()
+        return int(data.get("info", {}).get("total", 0))
     except Exception:
         return 0
 
@@ -48,22 +47,28 @@ def send_message(text):
 
 
 def main():
+    # ✅ AUTO RUN PROOF (NO FAKE NUMBERS)
+    if EVENT == "schedule":
+        send_message("✅ Bot is running (Auto check OK)")
+
     old = load_last()
 
-    men = safe_fetch_count(SHEIN_URL)
-    women = safe_fetch_count(SHEIN_URL)
+    men = safe_fetch_count(MEN_API)
+    women = safe_fetch_count(WOMEN_API)
+
+    now = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
     men_diff = men - old["men"]
     women_diff = women - old["women"]
 
     is_manual = EVENT == "workflow_dispatch"
 
-    # ❌ auto run me no change = no message
+    # ❌ Auto me sirf STOCK UP par hi message
     if not is_manual and men_diff <= 0 and women_diff <= 0:
+        save_last(men, women)
         return
 
-    title = "📦 SHEIN STOCK (Manual Check)" if is_manual else "🚨 SHEIN STOCK UPDATE"
-    now = datetime.now().strftime("%d %b %Y, %I:%M %p")
+    title = "📦 SHEIN STOCK (Manual Check)" if is_manual else "🚨 SHEIN STOCK UP!"
 
     msg = f"""{title}
 
